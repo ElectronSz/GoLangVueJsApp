@@ -3,7 +3,6 @@ package main
 //imports
 import (
 	"fmt"
-	"math"
 	"math/cmplx"
 )
 
@@ -39,31 +38,35 @@ func split(sum int) (x, y int) {
 
 //main function
 func main() {
-	fmt.Printf("Now you have %g problems.\n", math.Sqrt(7))
-	fmt.Println(add(50, 55))
-	fmt.Println(sub(50, 20))
+	// fmt.Printf("Now you have %g problems.\n", math.Sqrt(7))
+	// fmt.Println(add(50, 55))
+	// fmt.Println(sub(50, 20))
 
-	a, b := swap("Hello", "World")
-	fmt.Println(a, b)
+	// a, b := swap("Hello", "World")
+	// fmt.Println(a, b)
 
-	fmt.Println(split(10))
+	// fmt.Println(split(10))
 
-	var i int
-	j := 10
-	fmt.Println(i, c, python, java, j)
+	// var i int
+	// j := 10
+	// fmt.Println(i, c, python, java, j)
 
-	fmt.Printf("Type: %T Value: %v\n", z, z)
-	fmt.Printf("Type: %T Value: %v\n", mAXInt, mAXInt)
+	// fmt.Printf("Type: %T Value: %v\n", z, z)
+	// fmt.Printf("Type: %T Value: %v\n", mAXInt, mAXInt)
 
-	var k int
-	var f float64
-	var l bool
-	var s string
-	fmt.Printf("%v %v %v %q\n", k, f, l, s)
+	// var k int
+	// var f float64
+	// var l bool
+	// var s string
+	// fmt.Printf("%v %v %v %q\n", k, f, l, s)
 
-	var x, y int = 3, 4
-	var g float64 = math.Sqrt(float64(x*x + y*y))
-	var z uint = uint(f)
-	fmt.Println(x, g, z)
+	// var x, y int = 3, 4
+	// var g float64 = math.Sqrt(float64(x*x + y*y))
+	// var z uint = uint(f)
+	// fmt.Println(x, g, z)
+
+	m := 100
+
+	fmt.Println(m)
 
 }
