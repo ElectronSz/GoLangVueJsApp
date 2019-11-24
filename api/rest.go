@@ -1,14 +1,21 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 
+	"go.mongodb.org/mongo-driver/bson"
+	// "go.mongodb.org/mongo-driver/bson/primitive"
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
+
+var client *mongo.Client
 
 type event struct {
 	ID          string `json:"ID"`
@@ -24,37 +31,171 @@ var events = allEvents{
 		Title:       "Introduction to Golang",
 		Description: "Come join us for a chance to learn how golang works and get to eventually try it out",
 	},
-	{
-		ID:          "2",
-		Title:       "Deploying Docker Image",
-		Description: "Come join us for a chance to learn how golang works and get to eventually try it out",
-	},
 }
 
 func createEvent(w http.ResponseWriter, r *http.Request) {
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+
+	// Connect to MongoDB
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check the connection
+	err = client.Ping(context.TODO(), nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected to MongoDB!")
+
+	collection := client.Database("Api").Collection("events")
+
 	var newEvent event
+
+	//reuest body and error
 	reqBody, err := ioutil.ReadAll(r.Body)
+
+	//check if we have an error
 	if err != nil {
 		fmt.Fprintf(w, "Kindly enter data with the event title and description only in order to update")
 	}
 
 	json.Unmarshal(reqBody, &newEvent)
-	events = append(events, newEvent)
+	//events = append(events, newEvent)
+
+	av := newEvent
+
+	insertResult, err := collection.InsertOne(context.TODO(), av)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Inserted a single document: ", insertResult.InsertedID)
+
+	//header status['200 ok]
 	w.WriteHeader(http.StatusCreated)
 
-	json.NewEncoder(w).Encode(newEvent)
+	//json response
+	json.NewEncoder(w).Encode(insertResult)
+
+	err = client.Disconnect(context.TODO())
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Connection to MongoDB closed.")
 }
+
 func getOneEvent(w http.ResponseWriter, r *http.Request) {
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+
+	// Connect to MongoDB
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check the connection
+	err = client.Ping(context.TODO(), nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected to MongoDB!")
+
+	collection := client.Database("Api").Collection("events")
+
+	/******************************************/
 	eventID := mux.Vars(r)["id"]
 
-	for _, singleEvent := range events {
-		if singleEvent.ID == eventID {
-			json.NewEncoder(w).Encode(singleEvent)
-		}
+	var oneEvent event
+	filter := bson.D{{"id", eventID}}
+
+	err = collection.FindOne(context.TODO(), filter).Decode(&oneEvent)
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	fmt.Printf("Found a single document: %+v\n", oneEvent)
+	json.NewEncoder(w).Encode(oneEvent)
+
+	/*******************************************************/
+	err = client.Disconnect(context.TODO())
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Connection to MongoDB closed.")
+
 }
 func getAllEvents(w http.ResponseWriter, r *http.Request) {
-	json.NewEncoder(w).Encode(events)
+	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+
+	// Connect to MongoDB
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check the connection
+	err = client.Ping(context.TODO(), nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	//
+	fmt.Println("Connected to MongoDB!")
+
+	collection := client.Database("Api").Collection("events")
+
+	/******************************************/
+	findOptions := options.Find()
+	//findOptions.SetLimit(2)
+
+	var results []*event
+
+	cur, err := collection.Find(context.TODO(), bson.D{{}}, findOptions)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for cur.Next(context.TODO()) {
+
+		// create a value into which the single document can be decoded
+		var elem event
+		err := cur.Decode(&elem)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		results = append(results, &elem)
+	}
+
+	if err := cur.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	// Close the cursor once finished
+	cur.Close(context.TODO())
+
+	fmt.Printf("Found multiple documents (array of pointers): %+v\n", results)
+
+	json.NewEncoder(w).Encode(results)
+
+	/*******************************************************/
+	err = client.Disconnect(context.TODO())
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Connection to MongoDB closed.")
 }
 func updateEvent(w http.ResponseWriter, r *http.Request) {
 	eventID := mux.Vars(r)["id"]
