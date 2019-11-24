@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -73,14 +74,65 @@ func GetPersonEndpoint(response http.ResponseWriter, request *http.Request) {
 	json.NewEncoder(response).Encode(person)
 }
 
+type Trainer struct {
+	Name string
+	Age  int
+	City string
+}
+
 func main() {
 	fmt.Println("Starting the application...")
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	// Set client options
 	clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
-	client, _ = mongo.Connect(ctx, clientOptions)
-	router := mux.NewRouter()
-	router.HandleFunc("/person", CreatePersonEndpoint).Methods("POST")
-	router.HandleFunc("/people", GetPeopleEndpoint).Methods("GET")
-	router.HandleFunc("/person/{id}", GetPersonEndpoint).Methods("GET")
-	http.ListenAndServe(":12345", router)
+
+	// Connect to MongoDB
+	client, err := mongo.Connect(context.TODO(), clientOptions)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check the connection
+	err = client.Ping(context.TODO(), nil)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Connected to MongoDB!")
+
+	collection := client.Database("Api").Collection("trainers")
+
+	//ash := Trainer{"Ash", 10, "Pallet Town"}
+	misty := Trainer{"Misty", 10, "Cerulean City"}
+	brock := Trainer{"Brock", 15, "Pewter City"}
+	trainers := []interface{}{misty, brock}
+
+	insertManyResult, err := collection.InsertMany(context.TODO(), trainers)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println("Inserted multiple documents: ", insertManyResult.InsertedIDs)
+	// insertResult, err := collection.InsertOne(context.TODO(), ash)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// fmt.Println("Inserted a single document: ", insertResult.InsertedID)
+
+	err = client.Disconnect(context.TODO())
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Connection to MongoDB closed.")
+	// ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	// clientOptions := options.Client().ApplyURI("mongodb://localhost:27017")
+	// client, _ = mongo.Connect(ctx, clientOptions)
+	// router := mux.NewRouter()
+	// router.HandleFunc("/person", CreatePersonEndpoint).Methods("POST")
+	// router.HandleFunc("/people", GetPeopleEndpoint).Methods("GET")
+	// router.HandleFunc("/person/{id}", GetPersonEndpoint).Methods("GET")
+	// http.ListenAndServe(":12345", router)
 }
