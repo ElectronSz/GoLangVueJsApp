@@ -210,11 +210,12 @@ func updateEvent(w http.ResponseWriter, r *http.Request) {
 	//
 	fmt.Println("Connected to MongoDB!")
 
-	//collection := client.Database("Api").Collection("events")
+	collection := client.Database("Api").Collection("events")
 
 	/************************************************************/
 
-	//eventID := mux.Vars(r)["id"]
+	eventID := mux.Vars(r)["id"]
+
 	var updatedEvent event
 
 	reqBody, err := ioutil.ReadAll(r.Body)
@@ -223,31 +224,32 @@ func updateEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	json.Unmarshal(reqBody, &updatedEvent)
 
-	var theEvents = allEvents{}
-	theEvents = append(theEvents, updatedEvent)
+	//fmt.Println(updatedEvent)
 
-	fmt.Println(updatedEvent)
-	//	av := updateEvent
+	//opts := options.Update().SetUpsert(true)
+	filter := bson.D{{"id", eventID}}
+	update := bson.D{{"$set", bson.D{{"title", updatedEvent.Title}, {"description", updatedEvent.Description}}}}
 
-	json.NewEncoder(w).Encode(theEvents)
-	// fmt.Fprint(w, av.ID)
+	result, err := collection.UpdateOne(context.TODO(), filter, update)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	// opts := options.Update().SetUpsert(true)
-	// filter := bson.D{{"id", eventID}}
-	// update := bson.D{{"$set", bson.D{{"title", av.Title}}}}
+	if result.MatchedCount != 0 {
+		fmt.Println("matched and replaced an existing document with ID %v\n", result.UpsertedID)
+		json.NewEncoder(w).Encode(result)
+		return
+	}
+	if result.UpsertedCount != 0 {
+		fmt.Printf("inserted a new document with ID %v\n", result.UpsertedID)
+		json.NewEncoder(w).Encode(result)
+	}
 
-	// result, err := collection.UpdateOne(context.TODO(), filter, update, opts)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	if result.MatchedCount == 0 {
+		fmt.Printf("We can not find that document yur want to update=> Result: %v\n", result.MatchedCount)
+		json.NewEncoder(w).Encode(result)
+	}
 
-	// if result.MatchedCount != 0 {
-	// 	fmt.Println("matched and replaced an existing document")
-	// 	return
-	// }
-	// if result.UpsertedCount != 0 {
-	// 	fmt.Printf("inserted a new document with ID %v\n", result.UpsertedID)
-	// }
 	/*******************************************************/
 	err = client.Disconnect(context.TODO())
 
